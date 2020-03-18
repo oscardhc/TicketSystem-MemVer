@@ -71,8 +71,19 @@ struct DateTime: CustomStringConvertible {
         val.append(cur + d)
     }
     var description: String {
-        let date = intToDate(val[2])
-        return "\(date.0.withWidth(2))-\(date.1.withWidth(2)) \(val[1].withWidth(2)):\(val[0].withWidth(2))"
+        if val[2] < 0 {
+            return "xx-xx xx:xx"
+        } else {
+            let date = intToDate(val[2])
+            return "\(date.0.withWidth(2))-\(date.1.withWidth(2)) \(val[1].withWidth(2)):\(val[0].withWidth(2))"
+        }
+    }
+    var inMinutes: Int {
+        var ret = val[0]
+        for i in 1..<val.count {
+            ret += val[i] * DateTime.digits[i - 1]
+        }
+        return ret
     }
     
     
@@ -92,7 +103,12 @@ struct DateTime: CustomStringConvertible {
     }
     
     static func + (lhs: DateTime, rhs: DateTime) -> DateTime {
-        DateTime(lhs.val[2] + rhs.val[2], lhs.val[1] + rhs.val[1], lhs.val[0] + rhs.val[0])
+        var ret = lhs
+        return ret.combined(rhs: rhs, fun: (+))
+    }
+    static func - (lhs: DateTime, rhs: DateTime) -> DateTime {
+        var ret = lhs
+        return ret.combined(rhs: rhs, fun: (-))
     }
     
 }
