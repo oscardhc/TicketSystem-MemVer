@@ -91,6 +91,10 @@ struct DateTime: CustomStringConvertible {
         for i in 0..<DateTime.digits.count {
             val[i + 1] += val[i] / DateTime.digits[i]
             val[i] %= DateTime.digits[i]
+            if val[i] < 0 {
+                val[i] += DateTime.digits[i]
+                val[i + 1] -= 1
+            }
         }
     }
     

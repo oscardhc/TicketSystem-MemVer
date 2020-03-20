@@ -8,7 +8,48 @@
 
 import Foundation
 
-struct Train {
+class Object: Hashable {
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
+    static func == (lhs: Object, rhs: Object) -> Bool {
+        ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
+    }
+    
+}
+
+class User: Object {
+    let username: String
+    var password: String
+    var name: String
+    var mailAddr: String
+    var privilege: Int
+    
+    init(username: String, password: String, name: String, mailAddr: String, privilege: Int) {
+        (self.username, self.password, self.name, self.mailAddr, self.privilege) = (username, password, name, mailAddr, privilege)
+    }
+}
+
+class Order: Object {
+    let user: User
+    let train: Train
+    let from, to: String
+    let date: Int
+    var number: Int
+    var status: Bool
+    
+    func inversed() -> Self {
+        number = -number
+        return self
+    }
+    
+    init(user: User, train: Train, from: String, to: String, date: Int, number: Int, status: Bool) {
+        (self.user, self.train, self.from, self.to, self.date, self.number, self.status) = (user, train, from, to, date, number, status)
+    }
+}
+
+class Train: Object {
     
     let trainID: String
     let type: Character
@@ -20,13 +61,13 @@ struct Train {
     let date: (Int, Int)
     var sumTimes = [(DateTime, DateTime)]()
     
-    mutating func initialized() -> Self {
+    init(trainID: String, type: Character, stationNum: Int, startTime: DateTime, stations: [String] ,seatNums: [[Int]], prices: [Int], travelTimes: [Int], stopoverTimes: [Int], date: (Int, Int)) {
+        (self.trainID, self.type, self.stationNum, self.startTime, self.stations, self.seatNums, self.prices, self.travelTimes, self.stopoverTimes, self.date) = (trainID, type, stationNum, startTime, stations, seatNums, prices, travelTimes, stopoverTimes, date)
         var time = startTime
         for i in 0..<stations.count {
             sumTimes.append((i == 0 ? DateTime(-10000, 0) : time.combined(rhs: DateTime(0, travelTimes[i - 1])),
                              i == stations.count - 1 ? DateTime(-10000, 0) : time.combined(rhs: DateTime(0, stopoverTimes[i]))))
         }
-        return self
     }
     
     func query(for dd: Int) {
@@ -62,6 +103,17 @@ struct Train {
     
     func getPrice(from: String, to: String) -> Int {
         prices[stations.firstIndex(of: to)!] - prices[stations.firstIndex(of: from)!]
+    }
+    
+    func modifyTicket(order: Order) -> Bool {
+        let sIdx = stations.firstIndex(of: order.from)!, tIdx = stations.firstIndex(of: order.to)!
+        if seatNums[order.date - date.0][sIdx..<tIdx].min()! + order.number < 0 {
+            return false
+        }
+        for i in sIdx..<tIdx {
+            seatNums[order.date - date.0][i] += order.number
+        }
+        return true
     }
     
 }
