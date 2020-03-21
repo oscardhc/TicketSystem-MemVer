@@ -49,7 +49,7 @@ func intToDate(_ c: Int) -> (Int, Int) {
     return (-1, -1)
 }
 
-struct DateTime: CustomStringConvertible {
+struct DateTime: CustomStringConvertible, Codable {
     
     static var digits = [60, 24]
     var val = [Int]()

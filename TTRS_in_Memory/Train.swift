@@ -19,7 +19,7 @@ class Object: Hashable {
     
 }
 
-class User: Object {
+class User: Object, Codable {
     let username: String
     var password: String
     var name: String
@@ -31,74 +31,69 @@ class User: Object {
     }
 }
 
-class Order: Object {
+class Order: Object, Codable {
     let user: User
     let train: Train
     let from, to: String
     let date: Int
     var number: Int
-    var status: Bool
+    var status: Int
     
-    func inversed() -> Self {
-        number = -number
-        return self
-    }
-    
-    init(user: User, train: Train, from: String, to: String, date: Int, number: Int, status: Bool) {
+    init(user: User, train: Train, from: String, to: String, date: Int, number: Int, status: Int) {
         (self.user, self.train, self.from, self.to, self.date, self.number, self.status) = (user, train, from, to, date, number, status)
     }
 }
 
-class Train: Object {
+class Train: Object, Codable {
     
     let trainID: String
-    let type: Character
+    let type: String
     let stationNum: Int
     let startTime: DateTime
     let stations: [String]
     var seatNums: [[Int]]
     let prices, travelTimes, stopoverTimes: [Int]
-    let date: (Int, Int)
-    var sumTimes = [(DateTime, DateTime)]()
+    let date: [Int]
+    var sumTimes = [[DateTime]]()
     
-    init(trainID: String, type: Character, stationNum: Int, startTime: DateTime, stations: [String] ,seatNums: [[Int]], prices: [Int], travelTimes: [Int], stopoverTimes: [Int], date: (Int, Int)) {
+    init(trainID: String, type: String, stationNum: Int, startTime: DateTime, stations: [String] ,seatNums: [[Int]], prices: [Int], travelTimes: [Int], stopoverTimes: [Int], date: [Int]) {
         (self.trainID, self.type, self.stationNum, self.startTime, self.stations, self.seatNums, self.prices, self.travelTimes, self.stopoverTimes, self.date) = (trainID, type, stationNum, startTime, stations, seatNums, prices, travelTimes, stopoverTimes, date)
         var time = startTime
         for i in 0..<stations.count {
-            sumTimes.append((i == 0 ? DateTime(-10000, 0) : time.combined(rhs: DateTime(0, travelTimes[i - 1])),
-                             i == stations.count - 1 ? DateTime(-10000, 0) : time.combined(rhs: DateTime(0, stopoverTimes[i]))))
+            sumTimes.append([i == 0 ? DateTime(-10000, 0) : time.combined(rhs: DateTime(0, travelTimes[i - 1])),
+                             i == stations.count - 1 ? DateTime(-10000, 0) : time.combined(rhs: DateTime(0, stopoverTimes[i]))])
         }
     }
     
     func query(for dd: Int) {
-        if dd < date.0 || dd > date.1 {
+        if dd < date[0] || dd > date[1] {
             print("-1")
         } else {
-            let d = dd - date.0, base = DateTime(dd, 0)
+            let d = dd - date[0], base = DateTime(dd, 0)
             print(trainID, type)
             for i in 0..<stations.count {
                 print(stations[i],
-                      sumTimes[i].0 + base,
+                      sumTimes[i][0] + base,
                       "->",
-                      sumTimes[i].1 + base,
+                      sumTimes[i][1] + base,
                       prices[i],
                       i == stations.count - 1 ? "x" : seatNums[d][i])
             }
         }
     }
     
-    func queryPrint(from: String, to: String, at: Int) {
+    func queryPrint(from: String, to: String, at: Int, for order: Order? = nil) {
         let sIdx = stations.firstIndex(of: from)!, tIdx = stations.firstIndex(of: to)!
-        let base = DateTime(at - sumTimes[sIdx].1.val[2], 0)
+        let base = DateTime(at - sumTimes[sIdx][1].val[2], 0)
         print(trainID,
-              from, sumTimes[sIdx].1 + base, "->",
-              to, sumTimes[tIdx].0 + base,
+              from, sumTimes[sIdx][1] + base, "->",
+              to, sumTimes[tIdx][0] + base,
               prices[tIdx] - prices[sIdx],
-              seatNums[at - date.0][sIdx..<tIdx].min()!)
+              order?.number ?? seatNums[base.val[2] - date[0]][sIdx..<tIdx].min()!)
     }
     
     func getTime(from: String, to: String) -> Int {
-        (sumTimes[stations.firstIndex(of: to)!].0 - sumTimes[stations.firstIndex(of: from)!].1).inMinutes
+        (sumTimes[stations.firstIndex(of: to)!][0] - sumTimes[stations.firstIndex(of: from)!][1]).inMinutes
     }
     
     func getPrice(from: String, to: String) -> Int {
@@ -107,11 +102,11 @@ class Train: Object {
     
     func modifyTicket(order: Order) -> Bool {
         let sIdx = stations.firstIndex(of: order.from)!, tIdx = stations.firstIndex(of: order.to)!
-        if seatNums[order.date - date.0][sIdx..<tIdx].min()! + order.number < 0 {
+        if seatNums[order.date - date[0] - sumTimes[sIdx][1].val[2]][sIdx..<tIdx].min()! - order.number < 0 {
             return false
         }
         for i in sIdx..<tIdx {
-            seatNums[order.date - date.0][i] += order.number
+            seatNums[order.date - date[0] - sumTimes[sIdx][1].val[2]][i] -= order.number
         }
         return true
     }
